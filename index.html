@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta name="robots" content="noindex, nofollow">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>南九州 7 日遊 — 2027.01</title>
+
+  <!-- OG / Share Preview -->
+  <meta property="og:title" content="南九州 7 日遊 — 2027.01" />
+  <meta property="og:description" content="7 天 6 夜南九州旅行行程：福岡、鹿兒島、宮崎、指宿" />
+  <meta property="og:type" content="website" />
+  <meta name="description" content="2027 年 1 月南九州 7 日遊行程規劃" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#f4f1e8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <!-- 発車標用點陣字（載入失敗時退回等寬字型） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <script>
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    // 盡早套用已儲存的主題，避免載入時閃爍
+    try {
+      var savedTheme = localStorage.getItem('trip_2701_theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    } catch (e) { /* localStorage 不可用時跟隨系統 */ }
+  </script>
+</head>
+<body>
+
+  <!-- ===== Top Nav（手機只顯示品牌及主題鍵；桌面加上分頁連結） ===== -->
+  <nav class="top-nav" aria-label="主導航">
+    <div class="top-nav__inner">
+      <span class="top-nav__brand">
+        <span class="top-nav__mark" aria-hidden="true"></span>
+        <span class="top-nav__name">南九州</span>
+        <span class="top-nav__num">2027.01</span>
+      </span>
+      <div class="top-nav__links" role="tablist">
+        <button class="top-nav__link active" data-tab="overview" role="tab" aria-selected="true" aria-controls="overview" type="button">總覽</button>
+        <button class="top-nav__link" data-tab="schedule" role="tab" aria-selected="false" aria-controls="schedule" type="button">行程</button>
+        <button class="top-nav__link" data-tab="budget" role="tab" aria-selected="false" aria-controls="budget" type="button">費用</button>
+        <button class="top-nav__link" data-tab="wishlist" role="tab" aria-selected="false" aria-controls="wishlist" type="button">願望清單</button>
+        <button class="top-nav__link" data-tab="packing" role="tab" aria-selected="false" aria-controls="packing" type="button">準備</button>
+        <button class="top-nav__link" data-tab="taxfree" role="tab" aria-selected="false" aria-controls="taxfree" type="button">退稅</button>
+      </div>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="切換主題">
+        <span class="theme-toggle__icon" aria-hidden="true">◐</span>
+        <span class="theme-toggle__label">自動</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== Main Content ===== -->
+  <main class="main">
+    <section id="overview" class="section active" role="tabpanel" aria-label="總覽"></section>
+    <section id="schedule" class="section" role="tabpanel" aria-label="行程"></section>
+    <section id="budget" class="section" role="tabpanel" aria-label="費用"></section>
+    <section id="wishlist" class="section" role="tabpanel" aria-label="願望清單"></section>
+    <section id="packing" class="section" role="tabpanel" aria-label="準備"></section>
+    <section id="taxfree" class="section" role="tabpanel" aria-label="退稅"></section>
+  </main>
+
+  <!-- ===== Back to Top ===== -->
+  <button class="fab-top" id="fabTop" type="button" aria-label="回到頂部">↑</button>
+
+  <!-- ===== Bottom Tab Bar (mobile) ===== -->
+  <nav class="tab-bar" aria-label="主導航">
+    <button class="tab-bar__btn active" data-tab="overview" type="button">
+      <svg class="tab-bar__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5V4l-6 2.5L9 4Z"/><path d="M9 4v13M15 6.5v13"/></svg>
+      <span>總覽</span>
+    </button>
+    <button class="tab-bar__btn" data-tab="schedule" type="button">
+      <svg class="tab-bar__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+      <span>行程</span>
+    </button>
+    <button class="tab-bar__btn" data-tab="budget" type="button">
+      <svg class="tab-bar__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 9.5v5M17.5 9.5v5"/></svg>
+      <span>費用</span>
+    </button>
+    <button class="tab-bar__btn" data-tab="wishlist" type="button">
+      <svg class="tab-bar__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.8L12 3.5Z"/></svg>
+      <span>願望</span>
+    </button>
+    <button class="tab-bar__btn" data-tab="packing" type="button">
+      <svg class="tab-bar__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V8M4 13h16"/></svg>
+      <span>準備</span>
+    </button>
+    <button class="tab-bar__btn" data-tab="taxfree" type="button">
+      <svg class="tab-bar__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2.5-1.5-2 1.5-1.5-1.5-1.5 1.5-2-1.5L6 20.5v-17Z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/></svg>
+      <span>退稅</span>
+    </button>
+  </nav>
+
+  <!-- ===== Scripts ===== -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
+  </script>
+</body>
+</html>

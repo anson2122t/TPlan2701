@@ -1,0 +1,10 @@
+{
+  "name": "南九州 7 日遊",
+  "short_name": "南九州旅行",
+  "description": "2027 年 1 月南九州 7 日遊行程規劃",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f1e8",
+  "theme_color": "#f4f1e8",
+  "icons": []
+}

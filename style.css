@@ -1,0 +1,2658 @@
+/* ============================================================
+   南九州 7 日遊（2027.01）— 鐵道時刻表風
+   版式取材自車站駅名標、発車標及車票；不使用任何營運商商標。
+   ============================================================ */
+
+/* --- Design tokens ------------------------------------------ */
+:root {
+  color-scheme: light;
+
+  --color-bg: #f4f1e8;             /* 時刻表紙色 */
+  --color-surface: #fffdf7;
+  --color-surface-2: #ece7d9;      /* 凹入的面板 */
+  --color-text: #16233a;           /* 墨藍 */
+  --color-text-secondary: #5b6577;
+  --color-border: #d9d3c3;
+  --color-primary: #1d3a6e;        /* 連結、按鈕 */
+  --color-on-primary: #ffffff;
+  --color-accent: #c8341f;         /* 朱紅線色 */
+  --color-on-accent: #ffffff;
+  --color-band-idle: #6b7484;      /* 待定日子的線色 */
+
+  --color-success: #1f7a4d;
+  --color-success-bg: #dff0e5;
+  --color-warning: #8a5a00;
+  --color-warning-bg: #fbeccb;
+  --color-idle: #5b6577;
+  --color-idle-bg: #e9e5d9;
+  --color-danger: #b3261e;
+
+  --color-bar-1: #c8341f;
+  --color-bar-2: #1d3a6e;
+  --color-bar-3: #1f7a4d;
+  --color-bar-4: #b7791f;
+  --color-bar-5: #5a4a8a;
+
+  /* 発車標：兩個模式都用深底 */
+  --board-bg: #11151c;
+  --board-bezel: #2a2f3a;
+  --board-ink: #ffb000;
+  --board-dim: #c9a24a;
+  --board-rule: #2b3342;
+  --board-white: #f5f1e6;
+  --board-green: #8ee08e;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-card: 0 1px 0 rgba(22, 35, 58, 0.05), 0 10px 22px -16px rgba(22, 35, 58, 0.35);
+
+  --font-stack: -apple-system, BlinkMacSystemFont, "PingFang TC", "Hiragino Sans", "Noto Sans TC",
+    "Noto Sans CJK TC", "Microsoft JhengHei", "Yu Gothic", Meiryo, "Segoe UI", Roboto, sans-serif;
+  --font-num: "SF Mono", ui-monospace, "Roboto Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --font-led: "DotGothic16", ui-monospace, "Noto Sans Mono CJK JP", Menlo, Consolas, monospace;
+
+  --nav-h: 52px;
+  --tabbar-h: 62px;
+}
+
+/* 夜行模式：跟隨系統（未手動指定日間時） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: #0e131b;
+    --color-surface: #161d29;
+    --color-surface-2: #1e2736;
+    --color-text: #e8e4d8;
+    --color-text-secondary: #a3acbb;
+    --color-border: #2c3648;
+    --color-primary: #9cc0ff;
+    --color-on-primary: #0e131b;
+    --color-accent: #ff7a66;
+    --color-on-accent: #1a0b08;
+    --color-band-idle: #57627a;
+    --color-success: #6fd3a0;
+    --color-success-bg: #173326;
+    --color-warning: #ffcf70;
+    --color-warning-bg: #3a2c0c;
+    --color-idle: #a3acbb;
+    --color-idle-bg: #232c3b;
+    --color-danger: #ff8a80;
+    --color-bar-1: #ff7a66;
+    --color-bar-2: #9cc0ff;
+    --color-bar-3: #6fd3a0;
+    --color-bar-4: #ffcf70;
+    --color-bar-5: #b9a6f0;
+    --board-bg: #080b10;
+    --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.4), 0 12px 26px -16px rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* 夜行模式：手動指定 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0e131b;
+  --color-surface: #161d29;
+  --color-surface-2: #1e2736;
+  --color-text: #e8e4d8;
+  --color-text-secondary: #a3acbb;
+  --color-border: #2c3648;
+  --color-primary: #9cc0ff;
+  --color-on-primary: #0e131b;
+  --color-accent: #ff7a66;
+  --color-on-accent: #1a0b08;
+  --color-band-idle: #57627a;
+  --color-success: #6fd3a0;
+  --color-success-bg: #173326;
+  --color-warning: #ffcf70;
+  --color-warning-bg: #3a2c0c;
+  --color-idle: #a3acbb;
+  --color-idle-bg: #232c3b;
+  --color-danger: #ff8a80;
+  --color-bar-1: #ff7a66;
+  --color-bar-2: #9cc0ff;
+  --color-bar-3: #6fd3a0;
+  --color-bar-4: #ffcf70;
+  --color-bar-5: #b9a6f0;
+  --board-bg: #080b10;
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.4), 0 12px 26px -16px rgba(0, 0, 0, 0.9);
+}
+
+/* --- Reset & base ------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-stack);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+.main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px calc(var(--tabbar-h) + 40px + env(safe-area-inset-bottom));
+}
+
+/* --- Top nav ------------------------------------------------- */
+.top-nav {
+  background: var(--color-surface);
+  border-bottom: 4px solid var(--color-accent);
+  padding-top: env(safe-area-inset-top);
+}
+
+.top-nav__inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 920px;
+  min-height: var(--nav-h);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.top-nav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* 線路標記：朱紅方塊內藏白色軌道 */
+.top-nav__mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background:
+    linear-gradient(var(--color-on-accent), var(--color-on-accent)) center / 12px 3px no-repeat,
+    var(--color-accent);
+}
+
+.top-nav__num {
+  font-family: var(--font-num);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.top-nav__links {
+  display: none;
+}
+
+.top-nav__link {
+  position: relative;
+  min-height: var(--nav-h);
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.top-nav__link:hover {
+  color: var(--color-text);
+}
+
+.top-nav__link.active {
+  color: var(--color-text);
+}
+
+.top-nav__link.active::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.theme-toggle__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* --- Bottom tab bar (mobile) -------------------------------- */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.tab-bar__btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tabbar-h);
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab-bar__icon {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tab-bar__btn.active {
+  color: var(--color-text);
+}
+
+.tab-bar__btn.active::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 22%;
+  right: 22%;
+  height: 3px;
+  background: var(--color-accent);
+}
+
+/* --- Headings & notes ---------------------------------------- */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 14px;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.section-title::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 1.3em;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.section-subtitle,
+#taxfree h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 12px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.section-subtitle::after,
+#taxfree h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+#taxfree h3 {
+  margin: 20px 0 10px;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.section-note {
+  margin: 0 0 14px;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+/* --- Cards --------------------------------------------------- */
+.card {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.card__title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.card__hint {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.card__label {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.card__value {
+  margin-top: 2px;
+  font-family: var(--font-num);
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+.card__sub {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+/* --- Status stamp -------------------------------------------- */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 2px 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.stamp--small {
+  padding: 0 6px;
+  font-size: 0.66rem;
+}
+
+.stamp--confirmed {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  transform: rotate(-3deg);
+}
+
+.stamp--discussing {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.stamp--pending {
+  color: var(--color-idle);
+  background: var(--color-idle-bg);
+  border-style: dashed;
+}
+
+/* --- Trip board（總覽標題板）-------------------------------- */
+.trip-board {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 20px 18px 30px;
+  border: 2px solid var(--color-text);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.trip-board__kicker {
+  font-family: var(--font-num);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--color-text-secondary);
+}
+
+.trip-board__title {
+  margin-top: 4px;
+  font-size: clamp(1.7rem, 7.5vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+
+.trip-board__sub {
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* 站牌下方的線色帶 */
+.trip-board__band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12px;
+  background: var(--color-accent);
+}
+
+/* --- Countdown（翻牌式數字）---------------------------------- */
+.countdown__label {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.countdown__digits {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.flap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  height: 58px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--board-bg);
+  color: var(--board-white);
+  font-family: var(--font-num);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px #000, 0 2px 0 var(--board-bezel);
+}
+
+.flap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.countdown__unit {
+  margin-left: 4px;
+  padding-bottom: 6px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.countdown__state {
+  margin-top: 4px;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+}
+
+/* --- Info grid ----------------------------------------------- */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.info-card {
+  margin-bottom: 0;
+  padding: 12px;
+}
+
+/* --- Progress ring ------------------------------------------- */
+.progress-ring-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.progress-ring__svg {
+  flex: none;
+}
+
+.progress-ring__text {
+  font-weight: 800;
+}
+
+.progress-ring__sub {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+/* --- Route strip（路線帶）------------------------------------ */
+.route-strip__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-stop {
+  position: relative;
+}
+
+/* 線：手機為直線 */
+.route-stop::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--color-accent);
+}
+
+.route-stop--first::before {
+  top: 50%;
+}
+
+.route-stop--last::before {
+  bottom: 50%;
+}
+
+.route-stop__btn {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  padding: 4px 6px 4px 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.route-stop__btn:hover {
+  background: var(--color-surface-2);
+}
+
+.route-stop__dot {
+  justify-self: center;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--color-text);
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+
+/* 過夜的站：大一點的方形站標 */
+.route-stop--stay .route-stop__dot {
+  width: 22px;
+  height: 22px;
+  border-width: 4px;
+  border-radius: 6px;
+}
+
+.route-stop__name {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.route-stop__meta {
+  display: inline-flex;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.route-stop__date {
+  font-family: var(--font-num);
+}
+
+.route-stop__tag::before {
+  content: '·';
+  margin: 0 6px;
+}
+
+/* --- Map ----------------------------------------------------- */
+.map-container {
+  margin-bottom: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+#map {
+  width: 100%;
+  height: 300px;
+}
+
+.station-marker span {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 5px solid #16233a;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.leaflet-tooltip.station-label {
+  padding: 2px 8px;
+  border: 2px solid #16233a;
+  border-radius: 4px;
+  background: #fffdf7;
+  color: #16233a;
+  font: 800 0.78rem var(--font-stack);
+  letter-spacing: 0.04em;
+  box-shadow: none;
+}
+
+.leaflet-tooltip.station-label::before {
+  display: none;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
+  font-family: var(--font-stack);
+  line-height: 1.5;
+}
+
+.popup-title {
+  margin-bottom: 4px;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.popup-detail {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+/* --- Tickets（航班車票卡）------------------------------------ */
+.ticket-list {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ticket {
+  --stub-w: 86px;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--stub-w);
+  border: 1px solid var(--color-border);
+  border-top: 5px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* 票根打孔位 */
+.ticket::before,
+.ticket::after {
+  content: '';
+  position: absolute;
+  right: calc(var(--stub-w) - 8px);
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-bg);
+}
+
+.ticket::before {
+  top: -13px;   /* 圓心對齊票面外緣（上邊框 5px），連線色邊一齊打孔 */
+  clip-path: inset(50% 0 0 0);
+}
+
+.ticket::after {
+  bottom: -9px;
+  clip-path: inset(0 0 50% 0);
+}
+
+.ticket--minor {
+  border-top-color: var(--color-band-idle);
+}
+
+.ticket__main {
+  min-width: 0;
+  padding: 12px 14px 14px;
+}
+
+.ticket__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ticket__label {
+  padding: 1px 10px;
+  border-radius: 4px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.ticket--minor .ticket__label {
+  background: none;
+  color: var(--color-text-secondary);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.ticket__date {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticket__route {
+  display: grid;
+  grid-template-columns: auto minmax(24px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.ticket__port {
+  display: grid;
+}
+
+.ticket__port--to {
+  text-align: right;
+}
+
+.ticket__code {
+  font-family: var(--font-num);
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+.ticket__city {
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+}
+
+.ticket__time {
+  margin-top: 4px;
+  font-family: var(--font-num);
+  font-size: 1.02rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticket__arrow {
+  position: relative;
+  height: 2px;
+  background: var(--color-border);
+}
+
+.ticket__arrow span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  padding: 0 6px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+}
+
+.ticket__stub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-left: 2px dashed var(--color-border);
+  border-radius: 0 calc(var(--radius) - 5px) calc(var(--radius) - 1px) 0;
+  background: var(--color-surface-2);
+  text-align: center;
+}
+
+.ticket__flight {
+  font-family: var(--font-num);
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.ticket__airline {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+/* --- Weather -------------------------------------------------- */
+.weather-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.weather-row__name {
+  font-weight: 700;
+}
+
+.weather-row__temp {
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.weather-row__desc {
+  grid-column: 2 / -1;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+/* --- Schedule: date nav -------------------------------------- */
+.date-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px 14px;
+  padding: 8px 16px;
+  background: var(--color-bg);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.date-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.date-nav__pill {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1.5px solid var(--color-border);
+  border-bottom-width: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-family: var(--font-num);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.date-nav__pill--confirmed {
+  border-bottom-color: var(--color-success);
+}
+
+.date-nav__pill--discussing {
+  border-bottom-color: var(--color-warning);
+}
+
+.date-nav__pill--pending {
+  border-style: dashed;
+  border-bottom-style: solid;
+  color: var(--color-text-secondary);
+}
+
+/* --- Schedule: day card -------------------------------------- */
+.timeline {
+  display: grid;
+  gap: 20px;
+}
+
+.day-card {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  scroll-margin-top: 72px;
+}
+
+.day-card--today {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 駅名標 */
+.station-sign {
+  padding: 12px 16px 0;
+  text-align: center;
+}
+
+.station-sign__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.station-sign__date {
+  font-family: var(--font-num);
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.station-sign__dow {
+  margin-right: auto;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.station-sign__name {
+  margin-top: 8px;
+  font-size: clamp(1.7rem, 7.5vw, 2.3rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  /* letter-spacing 會在最後一個字後多出空位，補回令字置中 */
+  padding-left: 0.1em;
+}
+
+.station-sign__romaji {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-num);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  padding-left: 0.24em;
+}
+
+.station-sign__tags {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.station-sign__tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.station-sign__tag--today {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.station-sign__band {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px -16px 0;
+  padding: 7px 14px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.day-card--pending .station-sign__band {
+  background: var(--color-band-idle);
+  color: #ffffff;
+}
+
+.station-sign__prev::before {
+  content: '◀ ';
+  font-size: 0.7em;
+}
+
+.station-sign__next::after {
+  content: ' ▶';
+  font-size: 0.7em;
+}
+
+.station-sign__line {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.station-sign__line::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+
+.day-card__body {
+  padding: 14px 16px 16px;
+}
+
+.day-card__weather {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.day-card__empty {
+  margin-bottom: 14px;
+  padding: 18px 12px;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+
+.day-card__body > :last-child {
+  margin-bottom: 0;
+}
+
+/* 行程步驟 */
+.steps {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  column-gap: 12px;
+  padding-bottom: 16px;
+}
+
+.step:last-child {
+  padding-bottom: 0;
+}
+
+/* 步驟之間的連接線 */
+.step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 32px;
+  bottom: 2px;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.step__pict,
+.stay-ticket__pict {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #16233a;
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.step--flight .step__pict { background: #1d3a6e; }
+.step--move .step__pict { background: #c8341f; }
+.step--stay .step__pict { background: #1f7a4d; }
+.step--meal .step__pict { background: #9a6400; }
+.step--sight .step__pict { background: #5a4a8a; }
+.step--task .step__pict { background: #4d5b6a; }
+
+.step__body {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.step__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.step__text {
+  font-weight: 700;
+}
+
+.step__mode {
+  padding: 0 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.step__detail {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: 0.86rem;
+}
+
+.step__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.wish-link {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 36px;
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wish-link:hover {
+  border-color: var(--color-primary);
+}
+
+.wish-link--external {
+  text-decoration: none;
+}
+
+/* 発車標 */
+.board {
+  margin-top: 10px;
+  padding: 10px 12px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--board-bg);
+  box-shadow: inset 0 0 0 1px #000, 0 0 0 3px var(--board-bezel);
+  color: var(--board-ink);
+  font-family: var(--font-led);
+}
+
+.board__label {
+  padding-bottom: 6px;
+  color: var(--board-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-align: left;
+}
+
+.board__table th {
+  padding: 0 0 4px;
+  border-bottom: 1px solid var(--board-rule);
+  color: var(--board-dim);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-align: left;
+}
+
+.board__table th:nth-child(n + 2),
+.board__time {
+  width: 4.2em;
+  text-align: right;
+}
+
+.board__table td {
+  padding: 7px 0;
+  border-bottom: 1px dotted var(--board-rule);
+  font-size: 1.02rem;
+  line-height: 1.3;
+  text-shadow: 0 0 6px rgba(255, 176, 0, 0.35);
+}
+
+.board__table tr:last-child td {
+  border-bottom: 0;
+}
+
+.board__time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.board__table td:nth-child(2) {
+  color: var(--board-white);
+  text-shadow: 0 0 6px rgba(245, 241, 230, 0.3);
+}
+
+.board__table td:nth-child(3) {
+  color: var(--board-green);
+  text-shadow: 0 0 6px rgba(142, 224, 142, 0.3);
+}
+
+/* 候選清單（便條式）*/
+.candidates {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--color-warning);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--color-warning-bg);
+}
+
+.candidates__label {
+  color: var(--color-warning);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.candidates__list {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.candidate {
+  border-bottom: 1px dashed color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+.candidate:last-child {
+  border-bottom: 0;
+}
+
+.candidate > .candidate__name {
+  display: block;
+  padding: 10px 0;
+}
+
+.candidate__btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.candidate__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.candidate__go {
+  flex: none;
+  color: var(--color-primary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* 住宿票 */
+.stay-ticket {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-left: 5px solid var(--color-success);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.stay-ticket__pict {
+  background: #1f7a4d;
+}
+
+.stay-ticket__name {
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.stay-ticket__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  margin-top: 2px;
+}
+
+.stay-ticket__meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.stay-ticket__price {
+  font-family: var(--font-num);
+  font-size: 0.92rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stay-ticket--continued {
+  border-left-style: dashed;
+}
+
+.day-card__notes-toggle {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.day-card__notes-body {
+  display: none;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+
+.day-card__notes-body.open {
+  display: block;
+}
+
+/* --- Budget --------------------------------------------------- */
+.budget-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.budget-table th {
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--color-text);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-align: left;
+}
+
+.budget-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.budget-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.budget-table .amount {
+  font-family: var(--font-num);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.budget-table__dates {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hotel-name__text {
+  margin-right: 6px;
+  font-weight: 700;
+}
+
+.hotel-address {
+  margin: 2px 0 8px;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.pending-cell {
+  color: var(--color-text-secondary);
+}
+
+/* 總計：運賃顯示板 */
+.budget-total {
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: var(--board-bg);
+  box-shadow: inset 0 0 0 1px #000, 0 0 0 3px var(--board-bezel);
+  color: var(--board-ink);
+  font-family: var(--font-led);
+}
+
+.budget-total__label {
+  color: var(--board-dim);
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+}
+
+.budget-total__value {
+  margin: 2px 0 4px;
+  font-family: var(--font-num);
+  font-size: clamp(1.6rem, 7.5vw, 2.2rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  text-shadow: 0 0 10px rgba(255, 176, 0, 0.4);
+}
+
+.budget-total__note {
+  color: var(--board-dim);
+  font-size: 0.78rem;
+}
+
+/* --- Bar chart ------------------------------------------------- */
+.bar-chart__item {
+  margin-bottom: 14px;
+}
+
+.bar-chart__item:last-child {
+  margin-bottom: 0;
+}
+
+.bar-chart__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.bar-chart__label span:last-child {
+  flex: none;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-chart__track {
+  height: 10px;
+  border-radius: 3px;
+  background: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.bar-chart__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* --- Wishlist / checklists ------------------------------------ */
+.wishlist-area {
+  margin-bottom: 24px;
+}
+
+.wishlist-area__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 5px solid var(--color-accent);
+}
+
+.wishlist-area__title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+#taxfree .wishlist-area__title {
+  margin: 0;
+}
+
+.wishlist-area__progress {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-num);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.wishlist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wishlist-item input[type='checkbox'] {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.wishlist-item__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.wishlist-item__name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.wishlist-item__category {
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+}
+
+.wishlist-item--done .wishlist-item__name {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.wishlist-item--flash {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.wishlist-map-card {
+  margin-bottom: 20px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.wishlist-map-toolbar,
+.wishlist-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wishlist-map-toolbar {
+  margin-bottom: 12px;
+}
+
+.wishlist-hotel-control {
+  margin-bottom: 12px;
+}
+
+.wishlist-hotel-control label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.wishlist-hotel-select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: 600 0.85rem var(--font-stack);
+}
+
+.wishlist-map-filter,
+.wishlist-item__locate,
+.wishlist-item__maps {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: 700 0.8rem var(--font-stack);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.wishlist-map-filter[aria-pressed="true"] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+.wishlist-map-filter:not(:disabled):hover,
+.wishlist-item__locate:not(:disabled):hover,
+.wishlist-item__maps:hover {
+  border-color: var(--color-primary);
+}
+
+.wishlist-map-filter:disabled,
+.wishlist-item__locate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wishlist-map-legend,
+.wishlist-map-status {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.wishlist-map-legend {
+  margin-bottom: 10px;
+}
+
+.wishlist-map-card .map-container {
+  margin-bottom: 10px;
+}
+
+#wishlist-map {
+  width: 100%;
+  height: 320px;
+}
+
+.wishlist-hotels {
+  margin-bottom: 24px;
+  padding: 4px 16px;
+}
+
+.wishlist-hotels[open] {
+  padding-bottom: 16px;
+}
+
+.wishlist-hotels summary {
+  min-height: 44px;
+  font-weight: 700;
+  line-height: 44px;
+  cursor: pointer;
+}
+
+.wishlist-hotel {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.wishlist-hotel--selected {
+  border-color: var(--color-accent);
+  box-shadow: inset 4px 0 0 var(--color-accent);
+}
+
+.wishlist-hotel h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.wishlist-hotel .wishlist-item__actions {
+  margin-top: 10px;
+}
+
+#wishlist .wishlist-item--place {
+  flex-wrap: wrap;
+  cursor: default;
+}
+
+#wishlist .wishlist-item__check {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+#wishlist .wishlist-item__check input {
+  margin-top: 2px;
+}
+
+#wishlist .wishlist-item__name,
+#wishlist .wishlist-item__category,
+#wishlist .wishlist-item__address,
+#wishlist .wishlist-item__note,
+#wishlist .wishlist-item__distance {
+  display: block;
+}
+
+.wishlist-item__address {
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.wishlist-item__note {
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.wishlist-item__distance {
+  margin-top: 6px;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+#wishlist .wishlist-item__actions {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.wishlist-marker {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #c8341f;
+  color: #ffffff;
+  font: 700 17px var(--font-stack);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.wishlist-marker--done {
+  background: #1f7a4d;
+}
+
+.wishlist-marker--hotel {
+  border-color: #16233a;
+  border-radius: 8px;
+  background: #fffdf7;
+  color: #16233a;
+}
+
+.wishlist-marker--selected {
+  box-shadow: 0 0 0 3px #c8341f, 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.wishlist-popup__status {
+  margin: 8px 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.wishlist-map-popup a,
+.wishlist-map-popup a.leaflet-popup-close-button {
+  color: var(--color-primary);
+}
+
+.wishlist-popup a,
+.wishlist-popup button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 6px;
+}
+
+/* --- Tax refund ------------------------------------------------ */
+.taxfree-checked {
+  margin-bottom: 12px;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.taxfree-alert {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-warning);
+  border-left-width: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.taxfree-summary ul,
+.taxfree-notes ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.taxfree-summary li {
+  position: relative;
+  padding: 8px 0 8px 18px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.taxfree-summary li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1.1em;
+  width: 8px;
+  height: 8px;
+  background: var(--color-accent);
+}
+
+.taxfree-summary li:last-child,
+.taxfree-notes li:last-child {
+  border-bottom: 0;
+}
+
+#taxfree .taxfree-summary h2 {
+  margin: 0 0 6px;
+}
+
+.taxfree-notes li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.taxfree-kiosk-desc,
+.tax-accom-desc {
+  margin-bottom: 12px;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.taxfree-steps,
+.taxfree-lanes,
+.taxfree-cards,
+.tax-accom-rules {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.taxfree-steps .card,
+.taxfree-lanes .card,
+.taxfree-cards .card,
+.tax-accom-rules .card {
+  margin-bottom: 0;
+}
+
+.taxfree-step,
+.taxfree-lane {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.taxfree-step__icon,
+.taxfree-lane__icon {
+  flex: none;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.taxfree-step__title,
+.taxfree-lane__label {
+  margin-bottom: 4px;
+  font-weight: 800;
+}
+
+.taxfree-step__desc,
+.taxfree-lane__action,
+.taxfree-card__text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.taxfree-lane--green {
+  border-left: 6px solid var(--color-success);
+}
+
+.taxfree-lane--red {
+  border-left: 6px solid var(--color-danger);
+}
+
+.taxfree-airports {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+
+.taxfree-wifi__title {
+  margin-bottom: 8px;
+  font-weight: 800;
+}
+
+.taxfree-wifi__list {
+  margin: 0 0 8px;
+}
+
+.taxfree-wifi__list dt {
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.taxfree-wifi__list dd {
+  min-width: 0;
+  margin: 2px 0 10px;
+}
+
+.taxfree-wifi code {
+  display: inline-block;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--board-bg);
+  color: var(--board-ink);
+  font-family: var(--font-num);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.taxfree-wifi__note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.taxfree-guidance {
+  border-left: 6px solid var(--color-accent);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.taxfree-card__title {
+  margin: 0 0 6px;
+  font-size: 0.98rem;
+}
+
+#taxfree .taxfree-card__title,
+#taxfree .tax-accom-rule__area,
+#taxfree .taxfree-sources__heading {
+  margin-top: 0;
+}
+
+/* 表格 */
+.taxfree-timing,
+.taxfree-compare,
+.tax-accom-estimate {
+  margin-bottom: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow-x: auto;
+}
+
+.taxfree-timing th,
+.taxfree-compare th,
+.tax-accom-estimate th {
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--color-text);
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.taxfree-timing td,
+.taxfree-compare td,
+.tax-accom-estimate td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  vertical-align: top;
+}
+
+.taxfree-timing tbody tr:last-child td,
+.taxfree-compare tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tax-accom-total td {
+  border-bottom: 0;
+  font-weight: 800;
+}
+
+/* 可摺疊卡片 */
+.taxfree-details {
+  margin-bottom: 12px;
+  padding: 0 16px;
+}
+
+.taxfree-details[open] {
+  padding-bottom: 16px;
+}
+
+.taxfree-details > summary {
+  min-height: 48px;
+  padding: 12px 0;
+  font-weight: 800;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.taxfree-details__note {
+  margin: 0 0 12px;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.taxfree-details .taxfree-timing {
+  margin-bottom: 0;
+}
+
+.taxfree-security {
+  margin-bottom: 16px;
+}
+
+.taxfree-security__risk {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.taxfree-security__label {
+  margin-bottom: 6px;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.taxfree-security__actions,
+.tax-departure__details,
+.tax-accom-rule__tiers,
+.taxfree-sources ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.taxfree-security__actions li,
+.tax-departure__details li,
+.tax-accom-rule__tiers li {
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.taxfree-prep {
+  margin-bottom: 16px;
+}
+
+/* 出國稅 */
+.tax-departure__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tax-departure__amount {
+  color: var(--color-accent);
+  font-family: var(--font-num);
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.tax-departure__change {
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+}
+
+.tax-departure__details {
+  margin-bottom: 12px;
+}
+
+.tax-departure__trip-note {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+
+/* 住宿稅 */
+.tax-accom-rule__area {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.tax-accom-rule__type {
+  margin: 0 0 8px;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.tax-accom-rule--pending {
+  border-left: 6px solid var(--color-band-idle);
+}
+
+.tax-accom-rule--flat,
+.tax-accom-rule--tiered {
+  border-left: 6px solid var(--color-accent);
+}
+
+/* 來源 */
+.taxfree-sources {
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.taxfree-sources ul {
+  margin-top: 10px;
+}
+
+.taxfree-sources li {
+  margin-bottom: 8px;
+}
+
+.taxfree-sources__heading {
+  margin: 16px 0 0;
+  font-size: 0.95rem;
+}
+
+.taxfree-media-note {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+/* --- Back to top ------------------------------------------------ */
+.fab-top {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 1.1rem;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.fab-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+/* --- Small screens ----------------------------------------------- */
+@media (max-width: 600px) {
+  /* 費用表：每段住宿改為兩行（名稱／日期＋金額）*/
+  .budget-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .budget-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .budget-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .budget-table td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .budget-table td.hotel-name {
+    grid-column: 1 / -1;
+    padding-bottom: 8px;
+  }
+
+  .budget-table td.amount {
+    font-size: 1.02rem;
+  }
+
+  .budget-table__dates {
+    color: var(--color-text-secondary);
+    align-self: center;
+  }
+
+  /* 退稅頁表格：改為逐行卡片，以 data-label 顯示欄名 */
+  .taxfree-timing thead,
+  .taxfree-compare thead,
+  .tax-accom-estimate thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .taxfree-timing tr,
+  .taxfree-compare tr,
+  .tax-accom-estimate tr {
+    display: block;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .taxfree-timing tbody tr:last-child,
+  .taxfree-compare tbody tr:last-child,
+  .tax-accom-estimate tfoot tr {
+    border-bottom: 0;
+  }
+
+  .taxfree-timing td,
+  .taxfree-compare td,
+  .tax-accom-estimate td {
+    display: block;
+    padding: 4px 14px;
+    border-bottom: 0;
+  }
+
+  .taxfree-timing td::before,
+  .taxfree-compare td::before,
+  .tax-accom-estimate td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  .taxfree-timing td[data-label=""]::before,
+  .taxfree-compare td[data-label=""]::before,
+  .tax-accom-estimate td[data-label=""]::before {
+    display: none;
+  }
+
+  .tax-accom-estimate td {
+    display: grid;
+    grid-template-columns: 6.5em minmax(0, 1fr);
+    column-gap: 8px;
+    align-items: baseline;
+  }
+
+  .tax-accom-total td[data-label=""] {
+    display: none;
+  }
+
+  #wishlist .wishlist-item__check {
+    flex-basis: 100%;
+  }
+
+  #wishlist .wishlist-item__actions {
+    width: 100%;
+    padding-left: 34px;
+  }
+
+  .info-card {
+    padding: 10px;
+  }
+
+  .card__value {
+    font-size: 1.05rem;
+  }
+}
+
+/* --- Desktop -------------------------------------------------------- */
+@media (min-width: 768px) {
+  .top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+
+  .top-nav__links {
+    display: flex;
+    margin-left: 12px;
+  }
+
+  .tab-bar {
+    display: none;
+  }
+
+  .main {
+    max-width: 880px;
+    padding: 24px 24px 80px;
+  }
+
+  .trip-board {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 28px 28px 40px;
+  }
+
+  .countdown {
+    text-align: right;
+  }
+
+  .countdown__digits {
+    justify-content: flex-end;
+  }
+
+  /* 路線帶：橫向 */
+  .route-strip__list {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  .route-stop::before {
+    left: 0;
+    right: 0;
+    top: 19px;
+    bottom: auto;
+    width: auto;
+    height: 6px;
+  }
+
+  .route-stop--first::before {
+    top: 19px;
+    left: 50%;
+  }
+
+  .route-stop--last::before {
+    bottom: auto;
+    right: 50%;
+  }
+
+  .route-stop__btn {
+    grid-template-columns: 1fr;
+    grid-template-rows: 32px auto auto;
+    justify-items: center;
+    row-gap: 2px;
+    min-height: 0;
+    padding: 6px 4px 8px;
+    text-align: center;
+  }
+
+  .route-stop__dot {
+    align-self: center;
+  }
+
+  .route-stop__name {
+    font-size: 0.88rem;
+  }
+
+  .route-stop__meta {
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.7rem;
+    line-height: 1.5;
+  }
+
+  .route-stop__tag::before {
+    content: none;
+  }
+
+  #map {
+    height: 380px;
+  }
+
+  #wishlist-map {
+    height: 420px;
+  }
+
+  .ticket-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .date-nav {
+    top: calc(var(--nav-h) + 4px);
+    margin: 0 0 14px;
+    padding: 8px 0;
+  }
+
+  .day-card {
+    scroll-margin-top: calc(var(--nav-h) + 76px);
+  }
+
+  .fab-top {
+    right: 24px;
+    bottom: 24px;
+  }
+
+  .taxfree-steps,
+  .taxfree-lanes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --- Motion ---------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- Print ----------------------------------------------------------- */
+@media print {
+  .top-nav,
+  .tab-bar,
+  .fab-top,
+  .theme-toggle,
+  .date-nav,
+  .map-container,
+  .wishlist-map-card,
+  .wishlist-item__actions,
+  .wish-link {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .main {
+    max-width: none;
+    padding: 0;
+  }
+
+  .section {
+    display: block;
+    break-before: page;
+  }
+
+  .section:first-child {
+    break-before: auto;
+  }
+
+  .card,
+  .day-card,
+  .ticket {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .board,
+  .budget-total,
+  .flap {
+    background: #ffffff;
+    color: #000000;
+    box-shadow: inset 0 0 0 1px #000000;
+    text-shadow: none;
+  }
+
+  .board__table td,
+  .board__table th,
+  .board__label,
+  .budget-total__label,
+  .budget-total__note {
+    color: #000000 !important;
+    text-shadow: none !important;
+  }
+}
