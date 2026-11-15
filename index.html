@@ -33,13 +33,14 @@
     if ('scrollRestoration' in history) {
       history.scrollRestoration = 'manual';
     }
-    // 盡早套用已儲存的主題，避免載入時閃爍
-    try {
-      var savedTheme = localStorage.getItem('trip_2701_theme');
-      if (savedTheme === 'light' || savedTheme === 'dark') {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-      }
-    } catch (e) { /* localStorage 不可用時跟隨系統 */ }
+    // 盡早套用主題，避免載入時閃爍。預設為日間；揀過「自動」才跟隨系統
+    // （預設值要與 app.js 的 DEFAULT_THEME 一致）
+    (function () {
+      var savedTheme = null;
+      try { savedTheme = localStorage.getItem('trip_2701_theme'); } catch (e) { /* localStorage 不可用時用預設 */ }
+      if (savedTheme === 'auto') return;
+      document.documentElement.setAttribute('data-theme', savedTheme === 'dark' ? 'dark' : 'light');
+    })();
   </script>
 </head>
 <body>
@@ -61,8 +62,8 @@
         <button class="top-nav__link" data-tab="taxfree" role="tab" aria-selected="false" aria-controls="taxfree" type="button">退稅</button>
       </div>
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="切換主題">
-        <span class="theme-toggle__icon" aria-hidden="true">◐</span>
-        <span class="theme-toggle__label">自動</span>
+        <span class="theme-toggle__icon" aria-hidden="true">☀</span>
+        <span class="theme-toggle__label">日間</span>
       </button>
     </div>
   </nav>
